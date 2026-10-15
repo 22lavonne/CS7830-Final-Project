@@ -3,37 +3,41 @@ import shutil
 from pathlib import Path
 import pyghidra
 
-# 1. Start Ghidra headless JVM
+# starting ghidra headless using a hard coded path to the install directory
+# TODO: change this to take in a user path for this instead of hard coding
 pyghidra.start(install_dir="../opt/ghidra_12.1.4_PUBLIC_20260921/ghidra_12.1.4_PUBLIC")
 
+# hard coding other paths needed
+install_dir = Path("../opt/ghidra_12.1.4_PUBLIC_20260921/ghidra_12.1.4_PUBLIC")
+script_dir = Path("scripts_for_ghidra/combined_extraction.py")
+
+# TODO: change these so they go in a loop for all the files in the directory
 binary_path = Path("test-files/ARM__32__lsb__unix-system-v__arm-linux-gnueabihf-gcc-5.4.0__O0__no-obf__unstripped__coreutils-8.30__chcon")
+# project_dir = Path("/home/emiller/CS7830-Final-Project/test-files/ARM__32__lsb__unix-system-v__arm-linux-gnueabihf-gcc-5.4.0__O0__no-obf__unstripped__coreutils-8.30__chcon_ghidra/ARM__32__lsb__unix-system-v__arm-linux-gnueabihf-gcc-5.4.0__O0__no-obf__unstripped__coreutils-8.30__chcon_ghidra.rep")
 
 # this removes the temporary directory that pyghidra creates whenever it opens a project
 companion_project = Path(f"{binary_path}_ghidra")
 if companion_project.exists():
     shutil.rmtree(companion_project)
+    
+# get a new project name and put it in a different directory containing all the projects (based on executable name)
+project_dir = binary_path.parent / "projects"
+project_name = f"{binary_path.name}_ghidra_proj"
+    
+# then create this project if it doesn't already exist
+project = pyghidra.open_project(project_dir, project_name, create=True)
 
-# # 2. Use a temporary directory for the project so you don't get stuck with lock files
-# with tempfile.TemporaryDirectory() as tmpdir:
-#     # Open or create a temporary project
-#     project = pyghidra.open_project(tmpdir, "my_temp_project", create=True)
-    
-    
-    # 3. Open the program headlessly and list all functions
-with pyghidra.open_program(str(binary_path)) as flat_api:
-    program = flat_api.getCurrentProgram()
+# open the current proram (open_program is depricated, but it still works)
+with pyghidra.open_program(str(binary_path)) as pyghidra_program:
+    program = pyghidra_program.getCurrentProgram()
     print(f"Successfully loaded: {program.getName()}")
     print(f"Architecture: {program.getLanguageID()}\n")
 
-    function_manager = program.getFunctionManager()
-    print("Listing functions found in binary:")
-    for func in function_manager.getFunctions(True):
-        print(f" - Found function: {func.getName()} at {func.getEntryPoint()}")
-    # Programmatically import the binary into the project path
-    # (Or use project management if you prefer saving a permanent project folder)
-    
-    # Alternatively, if you want a permanent project folder next to your script:
-    # project = pyghidra.open_project(Path.cwd(), "ghidra_project", create=True)
+    # # testing by listing all the functions
+    # function_manager = program.getFunctionManager()
+    # print("Listing functions found in binary:")
+    # for func in function_manager.getFunctions(True):
+    #     print(f" - Found function: {func.getName()} at {func.getEntryPoint()}")
 
-    # For now, let's use the explicit project context loader:
-    # (If the binary is already imported into the project, you use program_context)
+    # running the script that extracts the data needed from the executable into json files
+    pyghidra.ghidra_script(path=script_dir, program=program, project=project)
