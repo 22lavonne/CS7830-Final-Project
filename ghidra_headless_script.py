@@ -1,82 +1,135 @@
-import tempfile
 import sys
 import shutil
+import zipfile
 from pathlib import Path
 import pyghidra
 
 
-# ghidrassist_path = Path("../opt/ghidra_12.1.4_PUBLIC_20260921/ghidra_12.1.4_PUBLIC/Extensions/Ghidra/ghidra_12.1_PUBLIC_20260530_GhidrAssist.zip")
-# path to ghidrassist directory
-# TODO: change this so it points to the submodule instead of a hard coded path based on just my system
-ghidrassist_path = Path.home() / "GhidrAssist"
+# ---------- hard coded paths ----------
+# install directory for ghidra
+INSTALL_DIR = Path("../opt/ghidra_12.1.4_PUBLIC_20260921/ghidra_12.1.4_PUBLIC").resolve()
 
-print("Checking path:", ghidrassist_path)
-print("Does path exist?", ghidrassist_path.exists())
-print("Contents of path:", [x.name for x in ghidrassist_path.iterdir() if x.is_dir()])
+# path for where the ghidrassist zip extension is (within the )
+GHIDRASSIST_ZIP = Path(
+    INSTALL_DIR / "Extensions/Ghidra/ghidra_12.1_PUBLIC_20260530_GhidrAssist.zip"
+).resolve()
 
-if str(ghidrassist_path) not in sys.path:
-    sys.path.insert(0, str(ghidrassist_path))
+# path for the extraction script
+SCRIPT_PATH = Path("scripts_for_ghidra/combined_extraction.py")
 
-from ghidrassist.graphrag import BinaryKnowledgeGraph
+
+# semantic analysis in ghidrassist does the llm summaries, which takes forever
+# so we turn that off, as we do not need it for the features we are extracting.
+RUN_SEMANTIC_ANALYSIS = False
+SEMANTIC_MAX_NODES = 100   # max functions to summarize per binary
+BINARY_PATH = Path(
+    "test-files/ARM__32__lsb__unix-system-v__arm-linux-gnueabihf-gcc-5.4.0__O0__"
+    "no-obf__unstripped__coreutils-8.30__chcon"
+)
+
+# function to get the directory where extensions go based on the install directory
+def ghidra_user_extension_dir(install_dir: Path) -> Path:
+    props = {}
+    for line in (install_dir / "Ghidra" / "application.properties").read_text().splitlines():
+        if "=" in line and not line.startswith("#"):
+            k, v = line.split("=", 1)
+            props[k.strip()] = v.strip()
+    version = props["application.version"]          # e.g. 12.1.4
+    release = props["application.release.name"]     # e.g. PUBLIC
+    return Path.home() / ".config" / "ghidra" / f"ghidra_{version}_{release}" / "Extensions"
+
+# function to install ghidrassist into the user's extensions folder (if it isn't there already)
+def install_extension(zip_path: Path, install_dir: Path) -> Path:
+    ext_root = ghidra_user_extension_dir(install_dir)
+    target = ext_root / "GhidrAssist"
+    if not target.exists():
+        print(f"Installing {zip_path.name} -> {ext_root}")
+        ext_root.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(zip_path) as zf:
+            # the top-level folder here is GhidrAssist
+            zf.extractall(ext_root)
+    else:
+        print(f"GhidrAssist already installed at {target}")
+    if not target.exists():
+        sys.exit(f"Expected {target} after extraction; check the zip's folder layout.")
+    return target
+
+# this actually installs the extension (if not already installed)
+ext_dir = install_extension(GHIDRASSIST_ZIP, INSTALL_DIR)
+
+# we can start pyghidra in the headless version, based on the installation directory of ghidra
+pyghidra.start(install_dir=str(INSTALL_DIR))
+
+# these imports must be here because they are only available after pyghidra has started in headless mode.
+# ghidra import:
+from ghidra.util.task import TaskMonitor
+# ghidrassist imports:
 from ghidrassist import AnalysisDB
+from ghidrassist.graphrag import GraphRAGService
+from ghidrassist.graphrag.community import CommunityDetector
 
-# starting ghidra headless using a hard coded path to the install directory
-# TODO: change this to take in a user path for this instead of hard coding
-pyghidra.start(install_dir="../opt/ghidra_12.1.4_PUBLIC_20260921/ghidra_12.1.4_PUBLIC")
-
-# hard coding other paths needed
-install_dir = Path("../opt/ghidra_12.1.4_PUBLIC_20260921/ghidra_12.1.4_PUBLIC")
-script_dir = Path("scripts_for_ghidra/combined_extraction.py")
-
-# TODO: change these so they go in a loop for all the files in the directory
-binary_path = Path("test-files/ARM__32__lsb__unix-system-v__arm-linux-gnueabihf-gcc-5.4.0__O0__no-obf__unstripped__coreutils-8.30__chcon")
-# project_dir = Path("/home/emiller/CS7830-Final-Project/test-files/ARM__32__lsb__unix-system-v__arm-linux-gnueabihf-gcc-5.4.0__O0__no-obf__unstripped__coreutils-8.30__chcon_ghidra/ARM__32__lsb__unix-system-v__arm-linux-gnueabihf-gcc-5.4.0__O0__no-obf__unstripped__coreutils-8.30__chcon_ghidra.rep")
 
 # this removes the temporary directory that pyghidra creates whenever it opens a project
-companion_project = Path(f"{binary_path}_ghidra")
+companion_project = Path(f"{BINARY_PATH}_ghidra")
 if companion_project.exists():
     shutil.rmtree(companion_project)
-    
-# get a new project name and put it in a different directory containing all the projects (based on executable name)
-project_dir = binary_path.parent / "projects"
-project_name = f"{binary_path.name}_ghidra_proj"
-    
-# then create this project if it doesn't already exist
+
+# getting the project directory and opening the project
+project_dir = BINARY_PATH.parent / "projects"
+project_name = f"{BINARY_PATH.name}_ghidra_proj"
 project = pyghidra.open_project(project_dir, project_name, create=True)
 
 try:
-    # open the current proram (open_program is depricated, but it still works)
-    with pyghidra.open_program(str(binary_path)) as pyghidra_program:
-        program = pyghidra_program.getCurrentProgram()
+    with pyghidra.open_program(str(BINARY_PATH)) as flat_api:
+        program = flat_api.getCurrentProgram()
         print(f"Successfully loaded: {program.getName()}")
         print(f"Architecture: {program.getLanguageID()}\n")
 
-        # # testing by listing all the functions
-        # function_manager = program.getFunctionManager()
-        # print("Listing functions found in binary:")
-        # for func in function_manager.getFunctions(True):
-        #     print(f" - Found function: {func.getName()} at {func.getEntryPoint()}")
+        monitor = TaskMonitor.DUMMY
+        db = AnalysisDB()
+        service = GraphRAGService.getInstance(db)
+        service.setCurrentProgram(program)
 
-        
-        
+        # this "reindexes" the binary, which is what ghidrassist uses to populate the semantic graph
+        print("[GhidrAssist] ReIndex Binary...")
         try:
-            print("Triggering programmatic GhidrAssist graph indexing...")
-            db = AnalysisDB()
-            program_hash = program.getExecutableSHA256()
-            
-            # Check if graph exists or trigger generation/sync
-            graph = db.getKnowledgeGraph(program_hash)
-            if not graph or len(graph.getNodesByType(None)) == 0:
-                print("Graph data missing for hash. Initializing build...")
-                # If your version uses a specific builder utility, call it here:
-                # e.g., BinaryKnowledgeGraph.buildForProgram(program, monitor)
-            
+            result = service.indexStructureSync(program, monitor, False)
+            print(f"[GhidrAssist] Reindex result: {result}")
         except Exception as e:
-            print(f"Note on programmatic indexing hook: {e}")
-            
-        # running the script that extracts the data needed from the executable into json files
-        pyghidra.ghidra_script(path=script_dir, program=program, project=project)
-            
+            print(f"[GhidrAssist] Reindex FAILED: {type(e).__name__}: {e}")
+
+        # printing here to check for stats, but uneeded when all the features will be extracted into separate files
+        # print("[GhidrAssist] Graph stats:", service.getGraphStats(program))
+
+        # the next few try except blocks run the different types of analysis from ghidrassist
+        # which happens after the binary is reindexed.
+        
+        # security analysis:
+        print("[GhidrAssist] Security Analysis...")
+        try:
+            n = service.updateAllSecurityFlags(program, monitor)
+            print(f"[GhidrAssist] Security flags updated for {n} functions")
+        except Exception as e:
+            print(f"[GhidrAssist] Security analysis FAILED: {type(e).__name__}: {e}")
+
+        # community detection (if functions have been identified to be part of a community)
+        try:
+            binary_id = program.getExecutableSHA256()
+            # print(f"[GhidrAssist] Binary id (SHA256): {binary_id}")
+            graph = db.getKnowledgeGraph(binary_id)
+            if graph is not None:
+                print("[GhidrAssist] Community Detection...")
+                found = CommunityDetector(graph, monitor).detectCommunities()
+                print(f"[GhidrAssist] Communities found: {found}")
+                print(f"[GhidrAssist] Nodes: {graph.getNodeCount()}, "
+                      f"edges: {graph.getEdgeCount()}")
+            else:
+                print("[GhidrAssist] No graph returned for that binary id")
+        except Exception as e:
+            print(f"[GhidrAssist] Community detection FAILED: {type(e).__name__}: {e}")
+
+        # run your existing extraction script
+        pyghidra.ghidra_script(path=SCRIPT_PATH, program=program, project=project)
+
 finally:
     project.close()
-    
