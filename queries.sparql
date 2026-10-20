@@ -1,0 +1,293 @@
+PREFIX : <http://www.semanticweb.org/jaspe/ontologies/2026/0/combined-ontology/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+# NOTE: should I include obfuscated files or no?
+# NOTE:
+# queries to write for:
+# metadata:
+    # # of external functions:
+SELECT (COUNT(?externalNode) AS ?importedFunctionOrLibCount)
+WHERE {
+    ?externalNode rdf:type :ExternalFunctionNode .
+}
+# information gathered from title of executable (will have to do string parsing for this)
+    # optimization level
+    # obfuscation (0 for false, 1 for true)
+    # if file is stripped (true or false)
+# semantic graph stuff
+        # number of distinct flags found in executable
+SELECT (COUNT(DISTINCT ?flag) AS ?distinctSecurityFlagsCount)
+WHERE {
+    ?function :hasSecurityFlag ?flag .
+}
+        # number of functions with at least one security flag
+PREFIX : <http://www.semanticweb.org/jaspe/ontologies/2026/0/combined-ontology/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT (?flagFuncs / ?totalFuncs AS ?fractionOfFunctionsWithFlags)
+WHERE {
+    # first, count distinct functions that have at least one security flag
+    {
+        SELECT (COUNT(DISTINCT ?func) AS ?flagFuncs)
+        WHERE {
+            ?func :hasSecurityFlag ?flag .
+        }
+    }
+    # then, get the count of the total number of functions in the binary
+    {
+        SELECT (COUNT(?total) AS ?totalFuncs)
+        WHERE {
+            ?total rdf:type :FunctionNode .
+        }
+    }
+}
+    # Risk levels
+        # # of functions with low security level
+SELECT (COUNT(?function) AS ?highRiskFunctionCount)
+WHERE {
+    ?function rdf:type :FunctionNode ;
+              :hasRiskLevel "LOW" .
+}
+        # # of functions with medium security level
+SELECT (COUNT(?function) AS ?highRiskFunctionCount)
+WHERE {
+    ?function rdf:type :FunctionNode ;
+              :hasRiskLevel "MEDIUM" .
+}
+        # # of functions with high security level
+
+SELECT (COUNT(?function) AS ?highRiskFunctionCount)
+WHERE {
+    ?function rdf:type :FunctionNode ;
+              :hasRiskLevel "HIGH" .
+}
+    
+    # graph structure
+        # number of functions
+SELECT (COUNT(?functionNode) AS ?totalFunctionCount)
+WHERE {
+    ?functionNode rdf:type :FunctionNode .
+}
+        # number of communities
+SELECT (COUNT(DISTINCT ?community) AS ?uniqueCommunityCount)
+WHERE {
+    ?function :belongsToCommunity ?community .
+}
+
+        # fraction of functions that call external functions
+SELECT (?externalCallingFuncs / ?totalFuncs AS ?fractionOfFunctions)
+WHERE {
+    # first, count distinct functions that call an external function
+    {
+        SELECT (COUNT(DISTINCT ?func) AS ?externalCallingFuncs)
+        WHERE {
+            ?func :calls ?extFunc .
+            ?extFunc rdf:type :ExternalFunctionNode .
+        }
+    }
+    # then, get the count of the total number of functions in the binary
+    {
+        SELECT (COUNT(?total) AS ?totalFuncs)
+        WHERE {
+            ?total rdf:type :FunctionNode .
+        }
+    }
+}
+        # number of instances of the following edges
+            # taint flows to
+PREFIX : <http://www.semanticweb.org/jaspe/ontologies/2026/0/combined-ontology/>
+
+SELECT (COUNT(*) AS ?taintFlowsToCount)
+WHERE {
+    ?subject :taintFlowsTo ?object .
+}
+            # network Recv
+SELECT (COUNT(*) AS ?networkRecvCount)
+WHERE {
+    ?subject :networkRecv ?object .
+}
+            # calls vulnerable
+SELECT (COUNT(*) AS ?callsVulnerableCount)
+WHERE {
+    ?subject :callsVulnerable ?object .
+}
+    # other
+        # instances of hasFileIOAPI relations
+SELECT (COUNT(*) AS ?hasFileIOAPICount)
+WHERE {
+    ?subject :hasFileIOAPI ?object .
+}
+        # instances of hasNetworkAPI relations
+SELECT (COUNT(*) AS ?hasNetworkAPICount)
+WHERE {
+    ?subject :hasNetworkAPI ?object .
+}
+        # instances of hasFilePath relations
+SELECT (COUNT(*) AS ?hasFilePathCount)
+WHERE {
+    ?subject :hasFilePath ?object .
+}
+
+# ==================== individual api instances ====================
+# Networking APIs:
+# socket
+SELECT (COUNT(?extFunc) AS ?socketApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "socket"))
+}
+
+# connect
+SELECT (COUNT(?extFunc) AS ?connectApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "connect"))
+}
+
+# bind
+SELECT (COUNT(?extFunc) AS ?bindApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "bind"))
+}
+
+# listen
+SELECT (COUNT(?extFunc) AS ?listenApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "listen"))
+}
+
+# accept
+SELECT (COUNT(?extFunc) AS ?acceptApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "accept"))
+}
+
+# send
+SELECT (COUNT(?extFunc) AS ?sendApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "send"))
+}
+
+# sendto
+SELECT (COUNT(?extFunc) AS ?sendtoApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "sendto"))
+}
+
+# recv
+SELECT (COUNT(?extFunc) AS ?recvApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "recv"))
+}
+
+# gethostbyname
+SELECT (COUNT(?extFunc) AS ?gethostbynameApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "gethostbyname"))
+}
+
+# inet_addr
+SELECT (COUNT(?extFunc) AS ?inet_addrApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "inet_addr"))
+}
+
+# setsocketopt
+SELECT (COUNT(?extFunc) AS ?setsockoptApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "setsockopt"))
+}
+
+# Process and system APIs
+# fork
+SELECT (COUNT(?extFunc) AS ?forkApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "fork"))
+}
+
+# execve
+SELECT (COUNT(?extFunc) AS ?execveApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "execve"))
+}
+
+# system
+SELECT (COUNT(?extFunc) AS ?systemApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "system"))
+}
+
+# kill
+SELECT (COUNT(?extFunc) AS ?killApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "kill"))
+}
+
+# signal
+SELECT (COUNT(?extFunc) AS ?signalApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "signal"))
+}
+
+# prctl
+SELECT (COUNT(?extFunc) AS ?prctlApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "prctl"))
+}
+
+# ptrace
+SELECT (COUNT(?extFunc) AS ?ptraceApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "ptrace"))
+}
+
+# File APIs:
+# fopen
+SELECT (COUNT(?extFunc) AS ?fopenApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "fopen"))
+}
+
+# unlink
+SELECT (COUNT(?extFunc) AS ?unlinkApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "unlink"))
+}
+
+# chmod
+SELECT (COUNT(?extFunc) AS ?chmodApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "chmod"))
+}
+
+# opendir
+SELECT (COUNT(?extFunc) AS ?opendirApiCount)
+WHERE {
+    ?extFunc rdf:type :ExternalFunctionNode .
+    FILTER(CONTAINS(LCASE(STR(?extFunc)), "opendir"))
+}
+
+# notes for obfuscated files
+    # imported apis should not be affected
+    # structure of graph might be though
+    # split features into robust and fragile groups, robus includes imported api presence and api based flags
+    # fragile includes counts of things and the graph structure, including call graph stuff and community detection
