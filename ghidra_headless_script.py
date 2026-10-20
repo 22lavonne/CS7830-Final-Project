@@ -3,6 +3,7 @@ import shutil
 import zipfile
 from pathlib import Path
 import pyghidra
+import subprocess
 
 
 # ---------- hard coded paths ----------
@@ -61,6 +62,7 @@ ext_dir = install_extension(GHIDRASSIST_ZIP, INSTALL_DIR)
 pyghidra.start(install_dir=str(INSTALL_DIR))
 
 # these imports must be here because they are only available after pyghidra has started in headless mode.
+# (will otherwise result in an import error if they are at the top of the file)
 # ghidra import:
 from ghidra.util.task import TaskMonitor
 # ghidrassist imports:
@@ -79,11 +81,16 @@ project_dir = BINARY_PATH.parent / "projects"
 project_name = f"{BINARY_PATH.name}_ghidra_proj"
 project = pyghidra.open_project(project_dir, project_name, create=True)
 
+# get the name of the program so the materialization script later knows what directory to look for for the files
+program_name = None
+
 try:
     with pyghidra.open_program(str(BINARY_PATH)) as flat_api:
         program = flat_api.getCurrentProgram()
         print(f"Successfully loaded: {program.getName()}")
         print(f"Architecture: {program.getLanguageID()}\n")
+        
+        program_name = str(program.getName())
 
         monitor = TaskMonitor.DUMMY
         db = AnalysisDB()
@@ -133,3 +140,9 @@ try:
 
 finally:
     project.close()
+    
+# after running the pyghidra script, now we want to materialize the knowledge graph 
+# based on the json files that were created from this
+# run the other python file as a subprocess
+result = subprocess.run([sys.executable, "scripts_for_ghidra/combined_materialization.py", program_name])
+print("Materialization script finished with return code of", result.returncode)
