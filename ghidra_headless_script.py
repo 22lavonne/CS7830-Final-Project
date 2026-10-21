@@ -146,3 +146,14 @@ finally:
 # run the other python file as a subprocess
 result = subprocess.run([sys.executable, "scripts_for_ghidra/combined_materialization.py", program_name])
 print("Materialization script finished with return code of", result.returncode)
+
+# then we want to run the script that writes to the csv file with the extracted features
+# if result.returncode == 0:
+#     build = subprocess.run([sys.executable, "scripts_for_ghidra/build_dataset_single.py"])
+#     print("Dataset builder finished with return code of", build.returncode)
+# else:
+#     print("Materialization failed, skipping dataset build")
+
+if result.returncode == 0:
+    build = subprocess.run([sys.executable, "scripts_for_ghidra/dataset_builder.py", program_name])
+    print("Dataset builder finished with return code of", build.returncode)
