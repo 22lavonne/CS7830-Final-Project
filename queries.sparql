@@ -1,29 +1,22 @@
 PREFIX : <http://www.semanticweb.org/jaspe/ontologies/2026/0/combined-ontology/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-# NOTE: should I include obfuscated files or no?
-# NOTE:
 # queries to write for:
-# metadata:
-    # # of external functions:
-SELECT (COUNT(?externalNode) AS ?importedFunctionOrLibCount)
-WHERE {
-    ?externalNode rdf:type :ExternalFunctionNode .
-}
+
 # information gathered from title of executable (will have to do string parsing for this)
     # optimization level
     # obfuscation (0 for false, 1 for true)
     # if file is stripped (true or false)
 # semantic graph stuff
         # number of distinct flags found in executable
+# name: distinctSecurityFlagsCount
 SELECT (COUNT(DISTINCT ?flag) AS ?distinctSecurityFlagsCount)
 WHERE {
     ?function :hasSecurityFlag ?flag .
 }
-        # number of functions with at least one security flag
-PREFIX : <http://www.semanticweb.org/jaspe/ontologies/2026/0/combined-ontology/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
+# number of functions with at least one security flag
+# name: fractionOfFunctionsWithFlags
 SELECT (?flagFuncs / ?totalFuncs AS ?fractionOfFunctionsWithFlags)
 WHERE {
     # first, count distinct functions that have at least one security flag
@@ -31,6 +24,7 @@ WHERE {
         SELECT (COUNT(DISTINCT ?func) AS ?flagFuncs)
         WHERE {
             ?func :hasSecurityFlag ?flag .
+            FILTER NOT EXISTS { ?func rdf:type :ExternalFunctionNode }
         }
     }
     # then, get the count of the total number of functions in the binary
@@ -38,43 +32,69 @@ WHERE {
         SELECT (COUNT(?total) AS ?totalFuncs)
         WHERE {
             ?total rdf:type :FunctionNode .
+            FILTER NOT EXISTS { ?total rdf:type :ExternalFunctionNode }
         }
     }
 }
-    # Risk levels
-        # # of functions with low security level
-SELECT (COUNT(?function) AS ?highRiskFunctionCount)
+
+# Risk levels
+# # of functions with low security level
+# name: lowRiskFunctionCount
+SELECT (COUNT(?function) AS ?lowRiskFunctionCount)
 WHERE {
     ?function rdf:type :FunctionNode ;
               :hasRiskLevel "LOW" .
 }
-        # # of functions with medium security level
-SELECT (COUNT(?function) AS ?highRiskFunctionCount)
+# # of functions with medium security level
+# name: mediumRiskFunctionCount
+SELECT (COUNT(?function) AS ?mediumRiskFunctionCount)
 WHERE {
     ?function rdf:type :FunctionNode ;
               :hasRiskLevel "MEDIUM" .
 }
-        # # of functions with high security level
-
+# # of functions with high security level
+# name: highRiskFunctionCount
 SELECT (COUNT(?function) AS ?highRiskFunctionCount)
 WHERE {
     ?function rdf:type :FunctionNode ;
               :hasRiskLevel "HIGH" .
 }
     
-    # graph structure
-        # number of functions
-SELECT (COUNT(?functionNode) AS ?totalFunctionCount)
+# graph structure
+# number of functions
+# name: totalFunctionCount
+SELECT (COUNT(DISTINCT ?functionNode) AS ?totalFunctionCount)
+WHERE {
+    # internal and external functions together (external nodes are not always typed as FunctionNode)
+    { ?functionNode rdf:type :FunctionNode . }
+    UNION
+    { ?functionNode rdf:type :ExternalFunctionNode . }
+}
+
+# # of just internal functions
+# name: internalFunctionCount
+SELECT (COUNT(?functionNode) AS ?internalFunctionCount)
 WHERE {
     ?functionNode rdf:type :FunctionNode .
+    FILTER NOT EXISTS { ?functionNode rdf:type :ExternalFunctionNode }
 }
-        # number of communities
+
+# # of external functions:
+# name: externalFunctionCount
+SELECT (COUNT(?externalNode) AS ?externalFunctionCount)
+WHERE {
+    ?externalNode rdf:type :ExternalFunctionNode .
+}
+
+# number of communities
+# name: uniqueCommunityCount
 SELECT (COUNT(DISTINCT ?community) AS ?uniqueCommunityCount)
 WHERE {
     ?function :belongsToCommunity ?community .
 }
 
-        # fraction of functions that call external functions
+# fraction of functions that call external functions
+# name: fractionOfFunctions
 SELECT (?externalCallingFuncs / ?totalFuncs AS ?fractionOfFunctions)
 WHERE {
     # first, count distinct functions that call an external function
@@ -83,6 +103,8 @@ WHERE {
         WHERE {
             ?func :calls ?extFunc .
             ?extFunc rdf:type :ExternalFunctionNode .
+            # the caller must be an internal function (external nodes also have :calls edges)
+            FILTER NOT EXISTS { ?func rdf:type :ExternalFunctionNode }
         }
     }
     # then, get the count of the total number of functions in the binary
@@ -90,39 +112,46 @@ WHERE {
         SELECT (COUNT(?total) AS ?totalFuncs)
         WHERE {
             ?total rdf:type :FunctionNode .
+            FILTER NOT EXISTS { ?total rdf:type :ExternalFunctionNode }
         }
     }
 }
-        # number of instances of the following edges
-            # taint flows to
-PREFIX : <http://www.semanticweb.org/jaspe/ontologies/2026/0/combined-ontology/>
-
+# number of instances of the following edges
+# taint flows to
+# name: taintFlowsToCount
 SELECT (COUNT(*) AS ?taintFlowsToCount)
 WHERE {
     ?subject :taintFlowsTo ?object .
 }
-            # network Recv
+# network Recv
+# name: networkRecvCount
 SELECT (COUNT(*) AS ?networkRecvCount)
 WHERE {
     ?subject :networkRecv ?object .
 }
-            # calls vulnerable
+# calls vulnerable
+# name: callsVulnerableCount
 SELECT (COUNT(*) AS ?callsVulnerableCount)
 WHERE {
     ?subject :callsVulnerable ?object .
 }
-    # other
-        # instances of hasFileIOAPI relations
+
+# other
+# instances of hasFileIOAPI relations
+# name: hasFileIOAPICount
 SELECT (COUNT(*) AS ?hasFileIOAPICount)
 WHERE {
     ?subject :hasFileIOAPI ?object .
 }
-        # instances of hasNetworkAPI relations
+# instances of hasNetworkAPI relations
+# name: hasNetworkAPICount
 SELECT (COUNT(*) AS ?hasNetworkAPICount)
 WHERE {
     ?subject :hasNetworkAPI ?object .
 }
-        # instances of hasFilePath relations
+
+# instances of hasFilePath relations
+# name: hasFilePathCount
 SELECT (COUNT(*) AS ?hasFilePathCount)
 WHERE {
     ?subject :hasFilePath ?object .
@@ -130,160 +159,160 @@ WHERE {
 
 # ==================== individual api instances ====================
 # Networking APIs:
-# socket
+# name: socketApiCount
 SELECT (COUNT(?extFunc) AS ?socketApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "socket"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("socket"))
 }
 
-# connect
+# name: connectApiCount
 SELECT (COUNT(?extFunc) AS ?connectApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "connect"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("connect"))
 }
 
-# bind
+# name: bindApiCount
 SELECT (COUNT(?extFunc) AS ?bindApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "bind"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("bind"))
 }
 
-# listen
+# name: listenApiCount
 SELECT (COUNT(?extFunc) AS ?listenApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "listen"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("listen"))
 }
 
-# accept
+# name: acceptApiCount
 SELECT (COUNT(?extFunc) AS ?acceptApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "accept"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("accept", "accept4"))
 }
 
-# send
+# name: sendApiCount
 SELECT (COUNT(?extFunc) AS ?sendApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "send"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("send"))
 }
 
-# sendto
+# name: sendtoApiCount
 SELECT (COUNT(?extFunc) AS ?sendtoApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "sendto"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("sendto"))
 }
 
-# recv
+# name: recvApiCount
 SELECT (COUNT(?extFunc) AS ?recvApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "recv"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("recv"))
 }
 
-# gethostbyname
+# name: gethostbynameApiCount
 SELECT (COUNT(?extFunc) AS ?gethostbynameApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "gethostbyname"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("gethostbyname"))
 }
 
-# inet_addr
+# name: inet_addrApiCount
 SELECT (COUNT(?extFunc) AS ?inet_addrApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "inet_addr"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("inet_addr"))
 }
 
-# setsocketopt
+# name: setsockoptApiCount
 SELECT (COUNT(?extFunc) AS ?setsockoptApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "setsockopt"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("setsockopt"))
 }
 
 # Process and system APIs
-# fork
+# name: forkApiCount
 SELECT (COUNT(?extFunc) AS ?forkApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "fork"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("fork", "vfork"))
 }
 
-# execve
+# name: execveApiCount
 SELECT (COUNT(?extFunc) AS ?execveApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "execve"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("execve"))
 }
 
-# system
+# name: systemApiCount
 SELECT (COUNT(?extFunc) AS ?systemApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "system"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("system"))
 }
 
-# kill
+# name: killApiCount
 SELECT (COUNT(?extFunc) AS ?killApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "kill"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("kill"))
 }
 
-# signal
+# name: signalApiCount
 SELECT (COUNT(?extFunc) AS ?signalApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "signal"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("signal", "sigaction"))
 }
 
-# prctl
+# name: prctlApiCount
 SELECT (COUNT(?extFunc) AS ?prctlApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "prctl"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("prctl"))
 }
 
-# ptrace
+# name: ptraceApiCount
 SELECT (COUNT(?extFunc) AS ?ptraceApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "ptrace"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("ptrace"))
 }
 
 # File APIs:
-# fopen
+# name: fopenApiCount
 SELECT (COUNT(?extFunc) AS ?fopenApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "fopen"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("fopen", "fopen64"))
 }
 
-# unlink
+# name: unlinkApiCount
 SELECT (COUNT(?extFunc) AS ?unlinkApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "unlink"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("unlink"))
 }
 
-# chmod
+# name: chmodApiCount
 SELECT (COUNT(?extFunc) AS ?chmodApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "chmod"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("chmod"))
 }
 
-# opendir
+# name: opendirApiCount
 SELECT (COUNT(?extFunc) AS ?opendirApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(CONTAINS(LCASE(STR(?extFunc)), "opendir"))
+    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("opendir"))
 }
 
 # notes for obfuscated files
