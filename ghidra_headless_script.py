@@ -1,4 +1,5 @@
 import sys
+import os
 import shutil
 import zipfile
 from pathlib import Path
@@ -23,6 +24,7 @@ SCRIPT_PATH = Path("scripts_for_ghidra/combined_extraction.py")
 # so we turn that off, as we do not need it for the features we are extracting.
 RUN_SEMANTIC_ANALYSIS = False
 SEMANTIC_MAX_NODES = 100   # max functions to summarize per binary
+# TODO: change this so it loops through all the files in the test-files directory instead of just one
 BINARY_PATH = Path(
     "test-files/ARM__32__lsb__unix-system-v__arm-linux-gnueabihf-gcc-5.4.0__O0__"
     "no-obf__unstripped__coreutils-8.30__chcon"
@@ -70,6 +72,12 @@ from ghidrassist import AnalysisDB
 from ghidrassist.graphrag import GraphRAGService
 from ghidrassist.graphrag.community import CommunityDetector
 
+# if there is an instance of this file, then it needs to be removed
+# since it interferes with the number of nodes from the executable
+# (it generates every time ghidrassist reindexes a new binary)
+prev_database = Path("ghidrassist_analysis.db")
+if prev_database.exists():
+    os.remove(prev_database)
 
 # this removes the temporary directory that pyghidra creates whenever it opens a project
 companion_project = Path(f"{BINARY_PATH}_ghidra")
