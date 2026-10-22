@@ -67,7 +67,13 @@ for ttl_file in sorted(TTL_DIR.glob(f"*/{TTL_NAME}")):
 
     # binary name is stored on the BinaryNode in the graph
     name_query = "SELECT ?n WHERE { ?b rdf:type :BinaryNode ; :hasName ?n } LIMIT 1"
-    binary_name = str(list(graph.query(name_query, initNs=PREFIXES))[0][0])
+    name_rows = list(graph.query(name_query, initNs=PREFIXES))
+    if name_rows:
+        binary_name = str(name_rows[0][0])
+    else:
+        # no BinaryNode with a name in this graph, so fall back to the folder name (which is the program name)
+        print(f"WARNING: no BinaryNode name found in {ttl_file}, using folder name instead")
+        binary_name = binary_folder
     row.update(filename_features(binary_name))
 
     # run every query and store its value under the query's name

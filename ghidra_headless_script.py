@@ -24,11 +24,11 @@ SCRIPT_PATH = Path("scripts_for_ghidra/combined_extraction.py")
 # so we turn that off, as we do not need it for the features we are extracting.
 RUN_SEMANTIC_ANALYSIS = False
 SEMANTIC_MAX_NODES = 100   # max functions to summarize per binary
-# TODO: change this so it loops through all the files in the test-files directory instead of just one
-BINARY_PATH = Path(
-    "test-files/ARM__32__lsb__unix-system-v__arm-linux-gnueabihf-gcc-5.4.0__O0__"
-    "no-obf__unstripped__coreutils-8.30__chcon"
-)
+# the binary to analyze is passed in as a command line argument (run_all.py loops over the test-files directory
+# and runs this script once per binary, so every binary gets a fresh jvm / fresh ghidrassist state)
+if len(sys.argv) != 2:
+    sys.exit(f"Usage: python {Path(sys.argv[0]).name} <path to binary>")
+BINARY_PATH = Path(sys.argv[1])
 
 # function to get the directory where extensions go based on the install directory
 def ghidra_user_extension_dir(install_dir: Path) -> Path:
@@ -149,6 +149,10 @@ try:
 finally:
     project.close()
     
+# if the program never loaded there is nothing to materialize
+if program_name is None:
+    sys.exit(f"Program {BINARY_PATH.name} was not loaded, nothing to materialize")
+
 # after running the pyghidra script, now we want to materialize the knowledge graph 
 # based on the json files that were created from this
 # run the other python file as a subprocess
@@ -156,12 +160,7 @@ result = subprocess.run([sys.executable, "scripts_for_ghidra/combined_materializ
 print("Materialization script finished with return code of", result.returncode)
 
 # then we want to run the script that writes to the csv file with the extracted features
-# if result.returncode == 0:
-#     build = subprocess.run([sys.executable, "scripts_for_ghidra/build_dataset_single.py"])
-#     print("Dataset builder finished with return code of", build.returncode)
-# else:
-#     print("Materialization failed, skipping dataset build")
-
+# (as long as the materialization script returns sucessfully)
 if result.returncode == 0:
     build = subprocess.run([sys.executable, "scripts_for_ghidra/dataset_builder.py", program_name])
     print("Dataset builder finished with return code of", build.returncode)
