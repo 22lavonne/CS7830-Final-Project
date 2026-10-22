@@ -9,11 +9,13 @@ import subprocess
 
 # ---------- hard coded paths ----------
 # install directory for ghidra
-INSTALL_DIR = Path("../opt/ghidra_12.1.4_PUBLIC_20260921/ghidra_12.1.4_PUBLIC").resolve()
-
+# INSTALL_DIR = Path("../opt/ghidra_12.1.4_PUBLIC_20260921/ghidra_12.1.4_PUBLIC").resolve()
+install_dir = Path.home() / "opt/ghidra_12.1.4_PUBLIC_20260921/ghidra_12.1.4_PUBLIC"
+if not install_dir.exists():
+    install_dir = Path.home() / "opt/ghidra_12.1.4_PUBLIC"
 # path for where the ghidrassist zip extension is (within the )
 GHIDRASSIST_ZIP = Path(
-    INSTALL_DIR / "Extensions/Ghidra/ghidra_12.1_PUBLIC_20260530_GhidrAssist.zip"
+    install_dir / "Extensions/Ghidra/ghidra_12.1_PUBLIC_20260530_GhidrAssist.zip"
 ).resolve()
 
 # path for the extraction script
@@ -58,10 +60,10 @@ def install_extension(zip_path: Path, install_dir: Path) -> Path:
     return target
 
 # this actually installs the extension (if not already installed)
-ext_dir = install_extension(GHIDRASSIST_ZIP, INSTALL_DIR)
+ext_dir = install_extension(GHIDRASSIST_ZIP, install_dir)
 
 # we can start pyghidra in the headless version, based on the installation directory of ghidra
-pyghidra.start(install_dir=str(INSTALL_DIR))
+pyghidra.start(install_dir=str(install_dir))
 
 # these imports must be here because they are only available after pyghidra has started in headless mode.
 # (will otherwise result in an import error if they are at the top of the file)
