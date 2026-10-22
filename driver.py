@@ -1,6 +1,7 @@
 import sys
 import subprocess
 from pathlib import Path
+import time
 
 # directory containing all the executables
 # every file directly inside it will get processed
@@ -20,12 +21,18 @@ print(f"Found {len(binaries)} binaries in {TEST_FILES_DIR}")
 # (ghidrassist keeps state like the analysis database between binaries if they share a process).
 # if one fails, report it and move on to the next
 failed = []
+index = 0
 for i, binary_path in enumerate(binaries, start=1):
     print(f"\n===== [{i}/{len(binaries)}] {binary_path.name} =====", flush=True)
     result = subprocess.run([sys.executable, HEADLESS_SCRIPT, str(binary_path)])
     if result.returncode != 0:
         print(f"FAILED on {binary_path.name} (return code {result.returncode})")
         failed.append(binary_path.name)
+    
+    index += 1
+    # sleep for 5 seconds after every 10 to give the cpu a break
+    if index % 10 == 0:
+        time.sleep(5)
 
 print(f"\nDone. {len(binaries) - len(failed)}/{len(binaries)} binaries processed successfully.")
 if failed:
