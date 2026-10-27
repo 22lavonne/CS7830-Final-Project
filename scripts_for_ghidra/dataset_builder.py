@@ -38,8 +38,11 @@ def filename_features(name):
     """Pull info out of e.g. x86__64__lsb__unix-system-v__gcc-5.5.0__O0__no-obf__unstripped__coreutils-8.30__nice"""
     parts = name.split("__")
     opt = parts[5]           # e.g. "O0"
-    obf = parts[6]           # "no-obf" or something else
-    stripped = parts[7]      # "unstripped" or "stripped"
+    # some names (e.g. the benign acpid/coreutils/util-linux ones) have no obfuscation field at all,
+    # in that case parts[6] is already the stripped/unstripped field and everything after it shifts by one
+    has_obf = parts[6] not in ("stripped", "unstripped")
+    obf = parts[6] if has_obf else "no-obf"            # "no-obf" or something else
+    stripped = parts[7] if has_obf else parts[6]       # "unstripped" or "stripped"
     return {
         "opt_level": int(opt[1]) if opt[1:].isdigit() else None,   # O0 -> 0, O3 -> 3, Os -> blank
         "is_obfuscated": 0 if obf == "no-obf" else 1,

@@ -94,8 +94,8 @@ WHERE {
 }
 
 # fraction of functions that call external functions
-# name: fractionOfFunctions
-SELECT (?externalCallingFuncs / ?totalFuncs AS ?fractionOfFunctions)
+# name: externalFunctionCallFraction
+SELECT (?externalCallingFuncs / ?totalFuncs AS ?externalFunctionCallFraction)
 WHERE {
     # first, count distinct functions that call an external function
     {
@@ -160,10 +160,12 @@ WHERE {
 # ==================== individual api instances ====================
 # Networking APIs:
 # name: socketApiCount
-SELECT (COUNT(?extFunc) AS ?socketApiCount)
+SELECT (COUNT(?caller) AS ?socketApiCount)
 WHERE {
+    ?caller :calls ?extFunc .
     ?extFunc rdf:type :ExternalFunctionNode .
     FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("socket"))
+    FILTER NOT EXISTS { ?caller rdf:type :ExternalFunctionNode }
 }
 
 # name: connectApiCount
