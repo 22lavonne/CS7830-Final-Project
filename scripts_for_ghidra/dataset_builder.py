@@ -44,8 +44,12 @@ def filename_features(name):
     obf = parts[6] if has_obf else "no-obf"            # "no-obf" or something else
     stripped = parts[7] if has_obf else parts[6]       # "unstripped" or "stripped"
     return {
-        "opt_level": int(opt[1]) if opt[1:].isdigit() else None,   # O0 -> 0, O3 -> 3, Os -> blank
+        # O0 -> 0, O1 -> 1, O2 -> 2, O3 -> 3, Os -> 4 (size optimization, not on the O0-O3 scale)
+        # a KeyError here means an unexpected opt level in the name, rather than silently writing a blank
+        "opt_level": {"O0": 0, "O1": 1, "O2": 2, "O3": 3, "Os": 4}[opt],
         "is_obfuscated": 0 if obf == "no-obf" else 1,
+        # label: 1 = malware (BASHLITE / Mirai / lightaidra), 0 = benign (coreutils / util-linux / acpid)
+        "label": 1 if re.search(r"BASHLITE|Mirai|lightaidra", name) else 0,
         # "is_stripped": 0 if stripped == "unstripped" else 1,
         # "meta_arch": parts[0],
         # "meta_package": parts[8],     # use for labels / grouping, NOT as a feature

@@ -117,18 +117,8 @@ WHERE {
     }
 }
 # number of instances of the following edges
-# taint flows to
-# name: taintFlowsToCount
-SELECT (COUNT(*) AS ?taintFlowsToCount)
-WHERE {
-    ?subject :taintFlowsTo ?object .
-}
-# network Recv
-# name: networkRecvCount
-SELECT (COUNT(*) AS ?networkRecvCount)
-WHERE {
-    ?subject :networkRecv ?object .
-}
+# removed taintFlowsTom and networkRecv from this section since they produced no output
+#
 # calls vulnerable
 # name: callsVulnerableCount
 SELECT (COUNT(*) AS ?callsVulnerableCount)
@@ -239,25 +229,12 @@ WHERE {
 }
 
 # Process and system APIs
+removed execveApiCount, systemApiCount, and ptraceApiCount because it produced no ouput
 # name: forkApiCount
 SELECT (COUNT(?extFunc) AS ?forkApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
     FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("fork", "vfork"))
-}
-
-# name: execveApiCount
-SELECT (COUNT(?extFunc) AS ?execveApiCount)
-WHERE {
-    ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("execve"))
-}
-
-# name: systemApiCount
-SELECT (COUNT(?extFunc) AS ?systemApiCount)
-WHERE {
-    ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("system"))
 }
 
 # name: killApiCount
@@ -279,13 +256,6 @@ SELECT (COUNT(?extFunc) AS ?prctlApiCount)
 WHERE {
     ?extFunc rdf:type :ExternalFunctionNode .
     FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("prctl"))
-}
-
-# name: ptraceApiCount
-SELECT (COUNT(?extFunc) AS ?ptraceApiCount)
-WHERE {
-    ?extFunc rdf:type :ExternalFunctionNode .
-    FILTER(LCASE(STRAFTER(STR(?extFunc), "#")) IN ("ptrace"))
 }
 
 # File APIs:
