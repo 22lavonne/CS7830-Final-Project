@@ -229,7 +229,7 @@ WHERE {
 }
 
 # Process and system APIs
-removed execveApiCount, systemApiCount, and ptraceApiCount because it produced no ouput
+# removed execveApiCount, systemApiCount, and ptraceApiCount because it produced no ouput
 # name: forkApiCount
 SELECT (COUNT(?extFunc) AS ?forkApiCount)
 WHERE {
