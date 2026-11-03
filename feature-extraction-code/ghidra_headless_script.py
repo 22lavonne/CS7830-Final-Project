@@ -19,8 +19,9 @@ GHIDRASSIST_ZIP = Path(
 ).resolve()
 
 # path for the extraction script
-SCRIPT_PATH = Path("scripts_for_ghidra/combined_extraction.py")
-
+EXTRACTION_SCRIPT_PATH = Path("feature-extraction-code/scripts_for_ghidra/combined_extraction.py")
+MATERIALIZATION_SCRIPT_PATH = Path("feature-extraction-code/scripts_for_ghidra/combined_materialization.py")
+DATASET_BUILDER_SCRIPT_PATH = Path("feature-extraction-code/scripts_for_ghidra/dataset_builder.py")
 
 # semantic analysis in ghidrassist does the llm summaries, which takes forever
 # so we turn that off, as we do not need it for the features we are extracting.
@@ -146,7 +147,7 @@ try:
             print(f"[GhidrAssist] Community detection FAILED: {type(e).__name__}: {e}")
 
         # run your existing extraction script
-        pyghidra.ghidra_script(path=SCRIPT_PATH, program=program, project=project)
+        pyghidra.ghidra_script(path=EXTRACTION_SCRIPT_PATH, program=program, project=project)
 
 finally:
     project.close()
@@ -158,11 +159,11 @@ if program_name is None:
 # after running the pyghidra script, now we want to materialize the knowledge graph 
 # based on the json files that were created from this
 # run the other python file as a subprocess
-result = subprocess.run([sys.executable, "scripts_for_ghidra/combined_materialization.py", program_name])
+result = subprocess.run([sys.executable, MATERIALIZATION_SCRIPT_PATH, program_name])
 print("Materialization script finished with return code of", result.returncode)
 
 # then we want to run the script that writes to the csv file with the extracted features
 # (as long as the materialization script returns sucessfully)
 if result.returncode == 0:
-    build = subprocess.run([sys.executable, "scripts_for_ghidra/dataset_builder.py", program_name])
+    build = subprocess.run([sys.executable, DATASET_BUILDER_SCRIPT_PATH, program_name])
     print("Dataset builder finished with return code of", build.returncode)

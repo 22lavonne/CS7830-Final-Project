@@ -7,8 +7,8 @@ from rdflib import Graph
 # hard coded paths for the ttl file, its name, where the sparql queries are located, and where the csv file will be put
 TTL_DIR = Path.home() / ".local" / "share" / "GhidrAssist" / "semgraph"
 TTL_NAME = "combined-output.ttl"
-QUERY_FILE = Path("queries") / "queries.sparql"
-OUT_CSV = Path("dataset.csv")
+QUERY_FILE = Path("feature-extraction-code/queries") / "queries.sparql"
+OUT_CSV = Path("feature-extraction-code/dataset.csv")
 
 # the prefixes for the sparql queries 
 # where the prefixes specify the ontology for what the objects we are looking for
