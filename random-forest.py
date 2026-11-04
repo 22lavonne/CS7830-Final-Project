@@ -52,7 +52,13 @@ plt.xlabel('Predicted Labels')
 plt.ylabel('True Labels')
 plt.show()
 
+feature_importances = classifier.feature_importances_
+
+# showing the importance of features
+plt.barh(x.columns, feature_importances)
+plt.xlabel('Feature Importance')
+plt.title('Feature Importance in Random Forest Classifier')
+plt.show()
+
 # TODO: get evaluation metrics from confusion matrix
 # ex: accuracy, F1 score, AUC-ROC, mean Average Precision (mAP), or domain-specific metrics
-# TODO: it currently shows 100% accuracy, that seems awfully suspicious, 
-# so try to see what feature(s) infleunce the model the most
