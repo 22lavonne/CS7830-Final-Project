@@ -5,7 +5,7 @@ import sklearn
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score, average_precision_score
 from sklearn.ensemble import RandomForestClassifier
 
 # tutorial from: https://www.geeksforgeeks.org/machine-learning/random-forest-regression-in-python/
@@ -18,7 +18,9 @@ df = pd.read_csv("dataset.csv")
 
 # get the features for x, which include all columns except 'file' (which is the name of the file) 
 # and 'label' which is the malware vs non malware indicator for y
-x = df.drop(columns=['file', 'label', ])
+# list of parameters removed for testing, but it was all still 100% accurate
+# 'file', 'label', 'sendApiCount', 'socketApiCount', 'hasNetworkAPICount', 'fractionOfFunctionsWithFlags', 'recvApiCount', 'distinctSecurityFlagsCount', 'inet_addrApiCount', 'connectApiCount', 'highRiskFunctionCount', 'setsockoptApiCount', 'uniqueCommunityCount', 'internalFunctionCount', 'totalFunctionCount'
+x = df.drop(columns=['file', 'label',])
 # y is for the label of malware vs non-malware, where 1 is malware and 0 is benign
 y = df.iloc[:,3].values
 
@@ -26,6 +28,8 @@ y = df.iloc[:,3].values
 # this splits the data. So the settings for the tutorial use a test size of 0.2, 
 # which means 20% of the data will be used for testing, while 80% is used for training.
 # and 42 is just the random seed used for what data is used for training and testing
+# if I set the test size to 0.9, then it has a few false negatives
+# but otherwise it just stays at 100% accuracy
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
 # feature scaling
@@ -37,10 +41,6 @@ x_test = scaler.transform(x_test)
 classifier = RandomForestClassifier(n_estimators=100, random_state=42)
 classifier.fit(x_train, y_train)
 y_pred = classifier.predict(x_test)
-
-# model evaluation
-accuracy = accuracy_score(y_test, y_pred)
-print(f'Accuracy: {accuracy * 100:.2f}%')
 
 conf_matrix = confusion_matrix(y_test, y_pred)
 
@@ -60,5 +60,14 @@ plt.xlabel('Feature Importance')
 plt.title('Feature Importance in Random Forest Classifier')
 plt.show()
 
-# TODO: get evaluation metrics from confusion matrix
-# ex: accuracy, F1 score, AUC-ROC, mean Average Precision (mAP), or domain-specific metrics
+# metric scores accuracy, F1 score, AUC-ROC, Average Precision (mAP), or domain-specific metrics
+
+f1 = f1_score(y_test, y_pred)
+auc_roc = roc_auc_score(y_test, y_pred)
+prec_score = average_precision_score(y_test, y_pred)
+
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+print("F1 score:", f1)
+print("AUC ROC curve value:", auc_roc)
+print("Average precision score:", prec_score)
