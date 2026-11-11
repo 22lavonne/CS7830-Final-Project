@@ -2,24 +2,47 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-from sklearn.datasets import load_breast_cancer
-from sklearn.model_selection import train_test_split
+
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix,precision_score, recall_score,f1_score,roc_curve, roc_auc_score
 
 df = pd.read_csv("dataset.csv")
 
+# x including all features
 x = df.drop(columns=['file', 'label',])
+
+# x excluding networking features
+# x = df.drop(columns=['file', 'label', 'hasNetworkAPICount', 'socketApiCount', 'connectApiCount', 'bindApiCount', 'listenApiCount', 'acceptApiCount', 
+#                      'sendApiCount', 'sendtoApiCount', 'recvApiCount', 'gethostbynameApiCount', 'inet_addrApiCount', 'setsockoptApiCount'])
+
+# x excluding ghidrassist features
+# x = df.drop(columns=['file', 'label', 'distinctSecurityFlagsCount', 'fractionOfFunctionsWithFlags', 'lowRiskFunctionCount', 'mediumRiskFunctionCount', 
+#                      'highRiskFunctionCount', 'uniqueCommunityCount', 'callsVulnerableCount'])
+
+# x excluding both networking and ghidrassist features: (still 100% accurate)
+# x = df.drop(columns=['file', 'label', 'hasNetworkAPICount', 'socketApiCount', 'connectApiCount', 'bindApiCount', 'listenApiCount', 'acceptApiCount', 
+#             'sendApiCount', 'sendtoApiCount', 'recvApiCount', 'gethostbynameApiCount', 'inet_addrApiCount', 'setsockoptApiCount', 'distinctSecurityFlagsCount', 'fractionOfFunctionsWithFlags', 'lowRiskFunctionCount', 'mediumRiskFunctionCount', 
+#             'highRiskFunctionCount', 'uniqueCommunityCount', 'callsVulnerableCount', 'totalFunctionCount', 'internalFunctionCount', 'hasFilePathCount'])
+
+
 # y is for the label of malware vs non-malware, where 1 is malware and 0 is benign
 y = df.iloc[:,3].values
 
-# training and testing split
-x_train, x_test, y_train, y_test = train_test_split(
-    # same test size and random seed as random forest
-    x, y, test_size=0.2, random_state=42
-)
+# define a new parameter for the program name, which the group k fold will be based on
+df["program"] = df['file'].str.split('__').str[9]
+groups = df["program"]
+
+# get an iterator that will randomly split the data based on the groups passed in
+splitter = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+train_idx, test_idx = next(splitter.split(x, y, groups))
+
+# then get the training and testing data based on the splitter
+x_train, x_test = x.iloc[train_idx], x.iloc[test_idx]
+y_train, y_test = y[train_idx], y[test_idx]
 
 # feature scaling
 scaler = StandardScaler()
@@ -36,19 +59,20 @@ print("y_pred:", y_pred)
 accuracy = accuracy_score(y_test, y_pred)
 print(f"accuracy: {round(accuracy,2)}")
 
-cm = confusion_matrix(y_test, y_pred)
-# cm
-print("cm:", cm)
+conf_matrix = confusion_matrix(y_test, y_pred)
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix, annot=True, fmt='g', cmap='Blues', cbar=False)
 
 precision = precision_score(y_test, y_pred)
-f"Precision: {round(precision,2)}"
-
+print(f"Precision: {round(precision,2)}"
+)
 recall = recall_score(y_test, y_pred)
-f"Recall: {round(recall,2)}"
-
+print(f"Recall: {round(recall,2)}"
+)
 f1 = f1_score(y_test, y_pred)
-f"f1 score: {round(f1,2)}"
-
+print(f"f1 score: {round(f1,2)}"
+)
 y_prob = model.predict_proba(x_test)[:, 1]
 print("y_prob", y_prob)
 

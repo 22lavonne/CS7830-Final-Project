@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score, average_precision_score
 from sklearn.ensemble import RandomForestClassifier
@@ -15,11 +15,43 @@ df = pd.read_csv("dataset.csv")
 # print(df)
 # df.info()
 
+# all features:
+# file,opt_level,is_obfuscated,label,distinctSecurityFlagsCount,fractionOfFunctionsWithFlags,lowRiskFunctionCount,
+# mediumRiskFunctionCount,highRiskFunctionCount,totalFunctionCount,internalFunctionCount,externalFunctionCount,uniqueCommunityCount,
+# externalFunctionCallFraction,callsVulnerableCount,hasFileIOAPICount,hasNetworkAPICount,hasFilePathCount,socketApiCount,
+# connectApiCount,bindApiCount,listenApiCount,acceptApiCount,sendApiCount,sendtoApiCount,recvApiCount,gethostbynameApiCount,
+# inet_addrApiCount,setsockoptApiCount,forkApiCount,killApiCount,signalApiCount,prctlApiCount,fopenApiCount,unlinkApiCount,chmodApiCount,opendirApiCount
+
+# networking apis: hasNetworkAPICount, socketApiCount, connectApiCount, bindApiCount, listenApiCount, acceptApiCount, sendApiCount, sendtoApiCount, recvApiCount, 
+# gethostbynameApiCount, inet_addrApiCount, setsockoptApiCount
+
+# features determined by ghidrassist: distinctSecurityFlagsCount, fractionOfFunctionsWithFlags, lowRiskFunctionCount, mediumRiskFunctionCount, highRiskFunctionCount, 
+# uniqueCommunityCount, callsVulnerableCount
+
 # get the features for x, which include all columns except 'file' (which is the name of the file) 
 # and 'label' which is the malware vs non malware indicator for y
 # list of parameters removed for testing, but it was all still 100% accurate
 # 'file', 'label', 'sendApiCount', 'socketApiCount', 'hasNetworkAPICount', 'fractionOfFunctionsWithFlags', 'recvApiCount', 'distinctSecurityFlagsCount', 'inet_addrApiCount', 'connectApiCount', 'highRiskFunctionCount', 'setsockoptApiCount', 'uniqueCommunityCount', 'internalFunctionCount', 'totalFunctionCount'
+
+# standard x containing all features (which still excludes the file name and label (where label is y))
 x = df.drop(columns=['file', 'label',])
+
+# x where all networking features are dropped (still 100% accuracy)
+# x = df.drop(columns=['file', 'label', 'hasNetworkAPICount', 'socketApiCount', 'connectApiCount', 'bindApiCount', 'listenApiCount', 'acceptApiCount', 
+#                      'sendApiCount', 'sendtoApiCount', 'recvApiCount', 'gethostbynameApiCount', 'inet_addrApiCount', 'setsockoptApiCount'])
+
+
+# x where all features analyzed/determined by ghidrassist are dropped (still 100% accuracy)
+# x = df.drop(columns=['file', 'label', 'distinctSecurityFlagsCount', 'fractionOfFunctionsWithFlags', 'lowRiskFunctionCount', 'mediumRiskFunctionCount', 
+#                      'highRiskFunctionCount', 'uniqueCommunityCount', 'callsVulnerableCount'])
+
+# x excluding both networking and ghidrassist features: (still 100% accurate)
+# x = df.drop(columns=['file', 'label', 'hasNetworkAPICount', 'socketApiCount', 'connectApiCount', 'bindApiCount', 'listenApiCount', 'acceptApiCount', 
+#             'sendApiCount', 'sendtoApiCount', 'recvApiCount', 'gethostbynameApiCount', 'inet_addrApiCount', 'setsockoptApiCount', 'distinctSecurityFlagsCount', 'fractionOfFunctionsWithFlags', 'lowRiskFunctionCount', 'mediumRiskFunctionCount', 
+#             'highRiskFunctionCount', 'uniqueCommunityCount', 'callsVulnerableCount', 'totalFunctionCount', 'internalFunctionCount', 'hasFilePathCount'])
+
+
+
 # y is for the label of malware vs non-malware, where 1 is malware and 0 is benign
 y = df.iloc[:,3].values
 
@@ -29,12 +61,20 @@ y = df.iloc[:,3].values
 # and 42 is just the random seed used for what data is used for training and testing
 # if I set the test size to 0.9, then it has a few false negatives
 # but otherwise it just stays at 100% accuracy
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+# x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=42)
 
-# feature scaling
-scaler = StandardScaler()
-x_train = scaler.fit_transform(x_train)
-x_test = scaler.transform(x_test)
+# define a new parameter for the program name, which is what the splitter will use to 
+df["program"] = df['file'].str.split('__').str[9]
+groups = df["program"]
+
+# get an iterator that will randomly split the data based on the groups passed in
+splitter = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+train_idx, test_idx = next(splitter.split(x, y, groups))
+
+# then get the training and testing data based on the splitter
+x_train, x_test = x.iloc[train_idx], x.iloc[test_idx]
+y_train, y_test = y[train_idx], y[test_idx]
+
 
 # random forest classifier
 classifier = RandomForestClassifier(n_estimators=100, random_state=42)
