@@ -36,16 +36,16 @@ df = pd.read_csv("dataset.csv")
 # standard x containing all features (which still excludes the file name and label (where label is y))
 x = df.drop(columns=['file', 'label',])
 
-# x where all networking features are dropped (still 100% accuracy)
+# x where all networking features are dropped
 # x = df.drop(columns=['file', 'label', 'hasNetworkAPICount', 'socketApiCount', 'connectApiCount', 'bindApiCount', 'listenApiCount', 'acceptApiCount', 
 #                      'sendApiCount', 'sendtoApiCount', 'recvApiCount', 'gethostbynameApiCount', 'inet_addrApiCount', 'setsockoptApiCount'])
 
 
-# x where all features analyzed/determined by ghidrassist are dropped (still 100% accuracy)
+# x where all features analyzed/determined by ghidrassist are dropped
 # x = df.drop(columns=['file', 'label', 'distinctSecurityFlagsCount', 'fractionOfFunctionsWithFlags', 'lowRiskFunctionCount', 'mediumRiskFunctionCount', 
 #                      'highRiskFunctionCount', 'uniqueCommunityCount', 'callsVulnerableCount'])
 
-# x excluding both networking and ghidrassist features: (still 100% accurate)
+# x excluding both networking and ghidrassist features:
 # x = df.drop(columns=['file', 'label', 'hasNetworkAPICount', 'socketApiCount', 'connectApiCount', 'bindApiCount', 'listenApiCount', 'acceptApiCount', 
 #             'sendApiCount', 'sendtoApiCount', 'recvApiCount', 'gethostbynameApiCount', 'inet_addrApiCount', 'setsockoptApiCount', 'distinctSecurityFlagsCount', 'fractionOfFunctionsWithFlags', 'lowRiskFunctionCount', 'mediumRiskFunctionCount', 
 #             'highRiskFunctionCount', 'uniqueCommunityCount', 'callsVulnerableCount', 'totalFunctionCount', 'internalFunctionCount', 'hasFilePathCount'])
@@ -91,12 +91,22 @@ plt.xlabel('Predicted Labels')
 plt.ylabel('True Labels')
 plt.show()
 
+# get the feature importances from the random forest classifier
 feature_importances = classifier.feature_importances_
 
-# showing the importance of features
-plt.barh(x.columns, feature_importances)
+# then put it into a data frame so it can be sorted descending
+feature_importances_df = pd.DataFrame({
+    'feature': x.columns,
+    'coefficient': feature_importances,
+}).sort_values(by='coefficient', ascending=False)
+
+
+# showing the importance of features (only positive for random forest)
+plt.barh(feature_importances_df['feature'], feature_importances_df['coefficient'])
 plt.xlabel('Feature Importance')
 plt.title('Feature Importance in Random Forest Classifier')
+plt.axvline(x=0, color='grey', linestyle='--', linewidth=0.8)
+plt.tight_layout()
 plt.show()
 
 # metric scores accuracy, F1 score, AUC-ROC, Average Precision (mAP), or domain-specific metrics

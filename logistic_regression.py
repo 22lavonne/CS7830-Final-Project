@@ -90,3 +90,21 @@ plt.ylabel("True Positive Rate")
 plt.title("ROC Curve")
 plt.legend()
 plt.show()
+
+# get feature importances
+feature_importances = model.coef_[0]
+
+# get a data frame of the features importances, sort them descending
+feature_importances_df = pd.DataFrame({
+    'feature': x.columns,
+    'coefficient': feature_importances,
+}).sort_values(by='coefficient', ascending=False)
+
+# plotting the feature importances descending (includes both positive and negative values)
+plt.barh(feature_importances_df['feature'], feature_importances_df['coefficient'])
+plt.xlabel('Feature importance')
+plt.ylabel('Features')
+plt.title('Feature Importance for Logistic Regression Classification')
+plt.axvline(x=0, color='grey', linestyle='--', linewidth=0.8)
+plt.tight_layout()
+plt.show()
