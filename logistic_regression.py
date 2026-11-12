@@ -54,30 +54,29 @@ model = LogisticRegression(max_iter=1000)
 model.fit(x_train, y_train)
 
 y_pred = model.predict(x_test)
-print("y_pred:", y_pred)
-
-accuracy = accuracy_score(y_test, y_pred)
-print(f"accuracy: {round(accuracy,2)}")
+# print("y_pred:", y_pred)
 
 conf_matrix = confusion_matrix(y_test, y_pred)
 
 plt.figure(figsize=(8, 6))
 sns.heatmap(conf_matrix, annot=True, fmt='g', cmap='Blues', cbar=False)
 
+# metrics used: confusion matrix, f1 score, accuracy, precision, recall, auc_roc curve, average precision.
+
+accuracy = accuracy_score(y_test, y_pred)
 precision = precision_score(y_test, y_pred)
-print(f"Precision: {round(precision,2)}"
-)
 recall = recall_score(y_test, y_pred)
-print(f"Recall: {round(recall,2)}"
-)
 f1 = f1_score(y_test, y_pred)
-print(f"f1 score: {round(f1,2)}"
-)
 y_prob = model.predict_proba(x_test)[:, 1]
-print("y_prob", y_prob)
+
+print(f"Accuracy: {round(accuracy,2)}")
+print(f"Precision: {round(precision,2)}")
+print(f"Recall: {round(recall,2)}")
+print(f"f1 score: {round(f1,2)}")
+# print("y_prob", y_prob)
 
 fpr, tpr, thresholds = roc_curve(y_test, y_prob)
-print("fpr:", fpr, "tpr:", tpr, "thresholds:", thresholds)
+# print("fpr:", fpr, "tpr:", tpr, "thresholds:", thresholds)
 
 roc_auc = roc_auc_score(y_test, y_prob)
 print("roc_auc:", roc_auc)

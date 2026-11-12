@@ -6,7 +6,8 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score, average_precision_score
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score, average_precision_score, precision_score, recall_score
+from sklearn.inspection import permutation_importance
 
 df = pd.read_csv("dataset.csv")
 
@@ -15,7 +16,7 @@ x = df.drop(columns=['file', 'label',])
 # y is for the label of malware vs non-malware, where 1 is malware and 0 is benign
 y = df.iloc[:,3].values
 
-
+# getting the different types of programs and identifying the groups of them
 df["program"] = df['file'].str.split('__').str[9]
 groups = df["program"]
 
@@ -42,23 +43,37 @@ plt.xlabel('Predicted Labels')
 plt.ylabel('True Labels')
 plt.show()
 
-# TODO: Is there a way to get feature importances for neural networks? (and also for logistic regression in that regard)
-# feature_importances = classifier.feature_importances_
+# metrics used: confusion matrix, f1 score, accuracy, precision, recall, auc_roc curve, average precision.
 
-# # showing the importance of features
-# plt.barh(x.columns, feature_importances)
-# plt.xlabel('Feature Importance')
-# plt.title('Feature Importance in Random Forest Classifier')
-# plt.show()
+# calculating the permutation importance 
+perm_importance = permutation_importance(clf, x_test, y_test, n_repeats=10, random_state=42, n_jobs=-1)
 
-# metric scores accuracy, F1 score, AUC-ROC, Average Precision (mAP), or domain-specific metrics
+# put it into a data frame so it can be sorted (smallest to biggest)
+perm_importance_df = pd.DataFrame({
+    'feature': x.columns,
+    'importance': perm_importance.importances_mean
+}).sort_values(by='importance', ascending=False)
+
+# plotting the permutation importances (where the higher the importance, 
+# it means that if that value shuffles then the accuracy of the model drops more)
+plt.figure(figsize=(10, len(perm_importance_df) * 0.3))
+plt.barh(perm_importance_df['feature'], perm_importance_df['importance'], color='teal')
+plt.xlabel('Mean Accuracy Drop (Permutation Importance)')
+plt.ylabel('Features')
+plt.title('Neural Network Permutation Importances')
+plt.tight_layout()
+plt.show()
 
 f1 = f1_score(y_test, y_pred)
 auc_roc = roc_auc_score(y_test, y_pred)
 prec_score = average_precision_score(y_test, y_pred)
-
 accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+
 print("Accuracy:", accuracy)
+print("Precision:", precision)
+print("Recall:", recall)
 print("F1 score:", f1)
 print("AUC ROC curve value:", auc_roc)
 print("Average precision score:", prec_score)

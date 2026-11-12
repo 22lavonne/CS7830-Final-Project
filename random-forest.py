@@ -4,7 +4,7 @@ import seaborn as sns
 
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score, average_precision_score
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score, average_precision_score, precision_score, recall_score
 from sklearn.ensemble import RandomForestClassifier
 
 # tutorial from: https://www.geeksforgeeks.org/machine-learning/random-forest-regression-in-python/
@@ -109,14 +109,18 @@ plt.axvline(x=0, color='grey', linestyle='--', linewidth=0.8)
 plt.tight_layout()
 plt.show()
 
-# metric scores accuracy, F1 score, AUC-ROC, Average Precision (mAP), or domain-specific metrics
+# metrics used: confusion matrix, f1 score, accuracy, precision, recall, auc_roc curve, average precision.
 
 f1 = f1_score(y_test, y_pred)
 auc_roc = roc_auc_score(y_test, y_pred)
 prec_score = average_precision_score(y_test, y_pred)
-
 accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+
 print("Accuracy:", accuracy)
+print("Precision:", precision)
+print("Recall:", recall)
 print("F1 score:", f1)
 print("AUC ROC curve value:", auc_roc)
 print("Average precision score:", prec_score)
