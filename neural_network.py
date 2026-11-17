@@ -6,8 +6,9 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score, average_precision_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score, roc_curve, average_precision_score, precision_score, recall_score
 from sklearn.inspection import permutation_importance
+from sklearn.preprocessing import StandardScaler
 
 df = pd.read_csv("dataset.csv")
 
@@ -24,8 +25,14 @@ groups = df["program"]
 splitter = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
 train_idx, test_idx = next(splitter.split(x, y, groups))
 
+
 # then get the training and testing data based on the splitter
 x_train, x_test = x.iloc[train_idx], x.iloc[test_idx]
+# use feature scaling here for neural networks
+scaler = StandardScaler()
+x_train = scaler.fit_transform(x_train)
+x_test = scaler.transform(x_test)
+
 y_train, y_test = y[train_idx], y[test_idx]
 
 
@@ -54,22 +61,32 @@ perm_importance_df = pd.DataFrame({
     'importance': perm_importance.importances_mean
 }).sort_values(by='importance', ascending=False)
 
-# plotting the permutation importances (where the higher the importance, 
-# it means that if that value shuffles then the accuracy of the model drops more)
-plt.figure(figsize=(10, len(perm_importance_df) * 0.3))
-plt.barh(perm_importance_df['feature'], perm_importance_df['importance'], color='teal')
-plt.xlabel('Mean Accuracy Drop (Permutation Importance)')
-plt.ylabel('Features')
-plt.title('Neural Network Permutation Importances')
-plt.tight_layout()
+y_prob = clf.predict_proba(x_test)[:, 1]
+fpr, tpr, thresholds = roc_curve(y_test, y_prob)
+
+plt.figure()
+plt.plot(clf.loss_curve_)
+plt.xlabel("Iteration")
+plt.ylabel("Training log loss")
+plt.title("MLP Training Loss Curve")
 plt.show()
 
 f1 = f1_score(y_test, y_pred)
-auc_roc = roc_auc_score(y_test, y_pred)
-prec_score = average_precision_score(y_test, y_pred)
+auc_roc = roc_auc_score(y_test, y_prob)
+prec_score = average_precision_score(y_test, y_prob)
 accuracy = accuracy_score(y_test, y_pred)
 precision = precision_score(y_test, y_pred)
 recall = recall_score(y_test, y_pred)
+
+
+plt.figure()
+plt.plot(fpr, tpr, label=f"ROC Curve (AUC = {auc_roc:.2f})")
+plt.plot([0, 1], [0, 1], linestyle="--") 
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curve")
+plt.legend()
+plt.show()
 
 print("Accuracy:", accuracy)
 print("Precision:", precision)

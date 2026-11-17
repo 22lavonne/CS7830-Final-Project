@@ -8,7 +8,7 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix,precision_score, recall_score,f1_score,roc_curve, roc_auc_score
+from sklearn.metrics import accuracy_score, confusion_matrix,precision_score, recall_score, f1_score, roc_curve, roc_auc_score, average_precision_score
 
 df = pd.read_csv("dataset.csv")
 
@@ -67,22 +67,25 @@ accuracy = accuracy_score(y_test, y_pred)
 precision = precision_score(y_test, y_pred)
 recall = recall_score(y_test, y_pred)
 f1 = f1_score(y_test, y_pred)
-y_prob = model.predict_proba(x_test)[:, 1]
 
-print(f"Accuracy: {round(accuracy,2)}")
-print(f"Precision: {round(precision,2)}")
-print(f"Recall: {round(recall,2)}")
-print(f"f1 score: {round(f1,2)}")
-# print("y_prob", y_prob)
+y_prob = model.predict_proba(x_test)[:, 1]
+prec_score = average_precision_score(y_test, y_prob)
 
 fpr, tpr, thresholds = roc_curve(y_test, y_prob)
 # print("fpr:", fpr, "tpr:", tpr, "thresholds:", thresholds)
 
-roc_auc = roc_auc_score(y_test, y_prob)
-print("roc_auc:", roc_auc)
+auc_roc = roc_auc_score(y_test, y_prob)
+
+print("Accuracy:", accuracy)
+print("Precision:", precision)
+print("Recall:", recall)
+print("F1 score:", f1)
+print("AUC ROC curve value:", auc_roc)
+print("Average precision score:", prec_score)
+
 
 plt.figure()
-plt.plot(fpr, tpr, label=f"ROC Curve (AUC = {roc_auc:.2f})")
+plt.plot(fpr, tpr, label=f"ROC Curve (AUC = {auc_roc:.2f})")
 plt.plot([0, 1], [0, 1], linestyle="--") 
 plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
