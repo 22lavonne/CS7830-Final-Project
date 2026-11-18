@@ -69,7 +69,9 @@ recall = recall_score(y_test, y_pred)
 f1 = f1_score(y_test, y_pred)
 
 y_prob = model.predict_proba(x_test)[:, 1]
-prec_score = average_precision_score(y_test, y_prob)
+avg_prec = average_precision_score(y_test, y_prob)
+avg_prec_ben = average_precision_score(1- y_test, 1 - y_pred)
+avg_prec_total = (avg_prec + avg_prec_ben) / 2
 
 fpr, tpr, thresholds = roc_curve(y_test, y_prob)
 # print("fpr:", fpr, "tpr:", tpr, "thresholds:", thresholds)
@@ -81,7 +83,7 @@ print("Precision:", precision)
 print("Recall:", recall)
 print("F1 score:", f1)
 print("AUC ROC curve value:", auc_roc)
-print("Average precision score:", prec_score)
+print("Mean precision Average:", avg_prec_total)
 
 
 plt.figure()

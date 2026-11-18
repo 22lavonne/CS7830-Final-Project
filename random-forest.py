@@ -124,7 +124,10 @@ plt.show()
 
 # other metrics
 f1 = f1_score(y_test, y_pred)
-prec_score = average_precision_score(y_test, y_prob)
+avg_prec = average_precision_score(y_test, y_prob)
+avg_prec_ben = average_precision_score(1- y_test, 1 - y_pred)
+avg_prec_total = (avg_prec + avg_prec_ben) / 2
+
 accuracy = accuracy_score(y_test, y_pred)
 precision = precision_score(y_test, y_pred)
 recall = recall_score(y_test, y_pred)
@@ -134,4 +137,4 @@ print("Precision:", precision)
 print("Recall:", recall)
 print("F1 score:", f1)
 print("AUC ROC curve value:", roc_auc)
-print("Average precision score:", prec_score)
+print("Mean average precision:", avg_prec_total)

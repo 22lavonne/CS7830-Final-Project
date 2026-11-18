@@ -48,7 +48,7 @@ sns.heatmap(conf_matrix, annot=True, fmt='g', cmap='Blues', cbar=False)
 plt.title('Confusion Matrix Heatmap')
 plt.xlabel('Predicted Labels')
 plt.ylabel('True Labels')
-plt.show()
+# plt.show()
 
 # metrics used: confusion matrix, f1 score, accuracy, precision, recall, auc_roc curve, average precision.
 
@@ -69,15 +69,16 @@ plt.plot(clf.loss_curve_)
 plt.xlabel("Iteration")
 plt.ylabel("Training log loss")
 plt.title("MLP Training Loss Curve")
-plt.show()
+# plt.show()
 
 f1 = f1_score(y_test, y_pred)
 auc_roc = roc_auc_score(y_test, y_prob)
-prec_score = average_precision_score(y_test, y_prob)
+avg_prec = average_precision_score(y_test, y_prob)
+avg_prec_ben = average_precision_score(1- y_test, 1 - y_pred)
+avg_prec_total = (avg_prec + avg_prec_ben) / 2
 accuracy = accuracy_score(y_test, y_pred)
 precision = precision_score(y_test, y_pred)
 recall = recall_score(y_test, y_pred)
-
 
 plt.figure()
 plt.plot(fpr, tpr, label=f"ROC Curve (AUC = {auc_roc:.2f})")
@@ -86,11 +87,11 @@ plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
 plt.title("ROC Curve")
 plt.legend()
-plt.show()
+# plt.show()
 
 print("Accuracy:", accuracy)
 print("Precision:", precision)
 print("Recall:", recall)
 print("F1 score:", f1)
 print("AUC ROC curve value:", auc_roc)
-print("Average precision score:", prec_score)
+print("Average precision score:", avg_prec_total)
