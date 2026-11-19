@@ -1,11 +1,11 @@
-# Adapted tutorial from: https://www.geeksforgeeks.org/machine-learning/ml-logistic-regression-using-python/
+# Partially adapted tutorial from: https://www.geeksforgeeks.org/machine-learning/ml-logistic-regression-using-python/
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
-from sklearn.model_selection import train_test_split, GroupShuffleSplit
+from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix,precision_score, recall_score, f1_score, roc_curve, roc_auc_score, average_precision_score
@@ -36,47 +36,60 @@ y = df.iloc[:,3].values
 df["program"] = df['file'].str.split('__').str[9]
 groups = df["program"]
 
-# get an iterator that will randomly split the data based on the groups passed in
-splitter = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-train_idx, test_idx = next(splitter.split(x, y, groups))
+for g in groups:
+    print(g)
 
-# then get the training and testing data based on the splitter
-x_train, x_test = x.iloc[train_idx], x.iloc[test_idx]
-y_train, y_test = y[train_idx], y[test_idx]
+# stratified group k fold: keeps each program entirely within one fold, while balancing classes across folds
+cv = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=0)
 
-# feature scaling
-scaler = StandardScaler()
+# initialize these to be 0's of length y elements, will be used for stratified k fold
+y_prob = np.zeros(len(y))
+y_pred = np.zeros(len(y), dtype=int)
 
-x_train = scaler.fit_transform(x_train)
-x_test = scaler.transform(x_test)
+for fold, (train_idx, test_idx) in enumerate(cv.split(x, y, groups)):
+    # scaler is fit on the training portion of each fold only
+    # use make pipleine method to do this
+    model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+    model.fit(x.iloc[train_idx], y[train_idx])
 
-model = LogisticRegression(max_iter=1000)
-model.fit(x_train, y_train)
+    # get the prediction and predicted probability for the current index
+    y_prob[test_idx] = model.predict_proba(x.iloc[test_idx])[:, 1]
+    y_pred[test_idx] = model.predict(x.iloc[test_idx])
 
-y_pred = model.predict(x_test)
-# print("y_pred:", y_pred)
+    # per-fold metrics (AUC only defined if the test fold has both classes)
+    y_fold = y[test_idx]
+    # get roc auc of current fold
+    fold_auc = roc_auc_score(y_fold, y_prob[test_idx]) if len(np.unique(y_fold)) == 2 else float('nan')
+    # print intermediate values for how many malware and benign in the current fold, as well as accuracy, f1, and AUC
+    print(f"Fold {fold}: {int(y_fold.sum())} malware / {int((1 - y_fold).sum())} benign in test,",
+            "accuracy:", accuracy_score(y_fold, y_pred[test_idx]),
+            "F1:", f1_score(y_fold, y_pred[test_idx], zero_division=0),
+            "AUC:", fold_auc)
 
-conf_matrix = confusion_matrix(y_test, y_pred)
+conf_matrix = confusion_matrix(y, y_pred)
 
 plt.figure(figsize=(8, 6))
 sns.heatmap(conf_matrix, annot=True, fmt='g', cmap='Blues', cbar=False)
+plt.title('Confusion Matrix Heatmap')
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.show()
 
 # metrics used: confusion matrix, f1 score, accuracy, precision, recall, auc_roc curve, average precision.
 
-accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred)
-recall = recall_score(y_test, y_pred)
-f1 = f1_score(y_test, y_pred)
+accuracy = accuracy_score(y, y_pred)
+precision = precision_score(y, y_pred, zero_division=0)
+recall = recall_score(y, y_pred, zero_division=0)
+f1 = f1_score(y, y_pred, zero_division=0)
 
-y_prob = model.predict_proba(x_test)[:, 1]
-avg_prec = average_precision_score(y_test, y_prob)
-avg_prec_ben = average_precision_score(1- y_test, 1 - y_pred)
+avg_prec = average_precision_score(y, y_prob)
+avg_prec_ben = average_precision_score(1- y, 1 - y_prob)
 avg_prec_total = (avg_prec + avg_prec_ben) / 2
 
-fpr, tpr, thresholds = roc_curve(y_test, y_prob)
+fpr, tpr, thresholds = roc_curve(y, y_prob)
 # print("fpr:", fpr, "tpr:", tpr, "thresholds:", thresholds)
 
-auc_roc = roc_auc_score(y_test, y_prob)
+auc_roc = roc_auc_score(y, y_prob)
 
 print("Accuracy:", accuracy)
 print("Precision:", precision)
@@ -93,10 +106,12 @@ plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
 plt.title("ROC Curve")
 plt.legend()
-plt.show()
+# plt.show()
 
-# get feature importances
-feature_importances = model.coef_[0]
+# get feature importances (fit one final pipeline on all the data)
+model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+model.fit(x, y)
+feature_importances = model[-1].coef_[0]
 
 # get a data frame of the features importances, sort them descending
 feature_importances_df = pd.DataFrame({
@@ -111,4 +126,4 @@ plt.ylabel('Features')
 plt.title('Feature Importance for Logistic Regression Classification')
 plt.axvline(x=0, color='grey', linestyle='--', linewidth=0.8)
 plt.tight_layout()
-plt.show()
+# plt.show()
